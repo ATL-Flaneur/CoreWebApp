@@ -4,12 +4,6 @@ using Prometheus;
 
 // Need $ dotnet add package prometheus-net.AspNetCore
 
-/* Add users with:
-curl -X POST \
--H "Content-Type: application/json" \
--d '{"firstName":"John", "lastName":"Smith", "Age":42}' \ 
-http://localhost:5015/adduser */
-
 // Instantiate a web application builder object.
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,12 +15,14 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment()) {
+if (app.Environment.IsDevelopment())
+{
     app.MapOpenApi();
 }
 
 // Set JSON serializer options.
-JsonSerializerOptions options = new JsonSerializerOptions {
+JsonSerializerOptions options = new JsonSerializerOptions
+{
     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
 };
 
@@ -47,7 +43,8 @@ app.UseHttpMetrics();
 
 // Return system health. If the app is running, it's healthy.
 // TODO: migrate to app.MapHealthChecks()
-app.MapGet("/health", async context => {
+app.MapGet("/health", async context =>
+{
     context.Response.StatusCode = 200;
     context.Response.ContentType = "application/json";
     var data = new { Message = "OK" };
@@ -55,7 +52,8 @@ app.MapGet("/health", async context => {
 });
 
 // GET command for system stats.
-app.MapGet("/stats", async context => {
+app.MapGet("/stats", async context =>
+{
     var cpuUsage = System.Environment.CpuUsage;
     var processorCount = System.Environment.ProcessorCount;
     var osVersion = System.Environment.OSVersion;
@@ -69,17 +67,19 @@ app.MapGet("/stats", async context => {
 // GET command for getting a list of users.
 app.MapGet("/getusers", async context =>
 {
-    var users =  userList.ToArray();
+    var users = userList.ToArray();
     await JsonSerializer.SerializeAsync(context.Response.Body, users, options);
 });
 
 // POST command for adding a user.
-app.MapPost("/adduser", (User user, HttpContext context) => {
+app.MapPost("/adduser", (User user, HttpContext context) =>
+{
     var validationContext = new ValidationContext(user, serviceProvider: null, items: null);
     var validationResults = new List<ValidationResult>();
-    bool isValid = Validator.TryValidateObject(user, validationContext , validationResults, true);
+    bool isValid = Validator.TryValidateObject(user, validationContext, validationResults, true);
 
-    if (!isValid) {
+    if (!isValid)
+    {
         failedUserAdds.Inc();
         return Results.BadRequest(validationResults);
     }
@@ -97,7 +97,8 @@ app.MapPost("/adduser", (User user, HttpContext context) => {
 app.Run();
 
 // User definition and validation logic.
-public class User(String firstName, String lastName, int age) {
+public class User(String firstName, String lastName, int age)
+{
     [Required(ErrorMessage = "First name is required.")]
     [StringLength(50, MinimumLength = 1, ErrorMessage = "First name is 1…50 characters.")]
     public string firstName { get; set; } = firstName;
