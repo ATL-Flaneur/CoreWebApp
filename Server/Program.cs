@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.ComponentModel.DataAnnotations;
 using Prometheus;
+using Microsoft.AspNetCore.Mvc;
 
 // Need $ dotnet add package prometheus-net.AspNetCore
 
@@ -89,7 +90,22 @@ app.MapPost("/adduser", (User user, HttpContext context) =>
     successfulUserAdds.Inc();
 
     // Confirm that everything's okay.
-    string result = "Received user: FirstName={user.lastName}, LastName={user.firstName}, Age={user.Age}";
+    string result = $"Received user: FirstName={user.LastName}, LastName={user.FirstName}, Age={user.Age}";
+    return Results.Ok(result);
+});
+
+// POST command for deleting a user.
+app.MapPost("/deluser", ([FromBody] DeleteUserRequest request, HttpContext context) =>
+{
+    string result;
+    User? userToRemove = userList.Find(user => user.Id == request.UserId);
+    if (userToRemove == null)
+    {
+        result = $"No user found with ID {request.UserId}";
+        return Results.NotFound(result);
+    }
+    result = $"Removed user: FirstName={userToRemove.LastName}, LastName={userToRemove.FirstName}, Age={userToRemove.Age}";
+    userList.Remove(userToRemove);
     return Results.Ok(result);
 });
 
@@ -97,17 +113,38 @@ app.MapPost("/adduser", (User user, HttpContext context) =>
 app.Run();
 
 // User definition and validation logic.
-public class User(String firstName, String lastName, int age)
+public class User
 {
     [Required(ErrorMessage = "First name is required.")]
     [StringLength(50, MinimumLength = 1, ErrorMessage = "First name is 1…50 characters.")]
-    public string firstName { get; set; } = firstName;
+    public string FirstName { get; set; }
 
     [Required(ErrorMessage = "Last name is required.")]
     [StringLength(50, MinimumLength = 1, ErrorMessage = "Last name is 1…50 characters.")]
-    public string lastName { get; set; } = lastName;
+    public string LastName { get; set; }
 
     [Required(ErrorMessage = "Age is required.")]
     [Range(0, 100, ErrorMessage = "Age is 0…100")]
-    public int age { get; set; } = age;
+    public int Age { get; set; }
+
+    [Required(ErrorMessage = "ID is required.")]
+    [Range(0, int.MaxValue, ErrorMessage = "ID is a non-negative integer.")]
+    public int Id  { get; set; }
+
+    // First user is 0, then 1, etc.
+    private static int nextId = 0;
+
+    public User (String firstName, String lastName, int age)
+    {
+        FirstName = firstName;
+        LastName = lastName;
+        Age = age;
+        Id = Interlocked.Increment(ref nextId) - 1; // Thread-safe increment.
+    }
 }
+
+public class DeleteUserRequest
+{
+    public int UserId { get; set; }
+}
+
