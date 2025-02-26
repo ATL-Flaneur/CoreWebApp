@@ -32,6 +32,7 @@ var successfulUserAdds = Metrics.CreateCounter("successful_user_adds", "Number o
 var failedUserAdds = Metrics.CreateCounter("failed_user_adds", "Number of failed user adds.");
 var successfulUserDeletes = Metrics.CreateCounter("successful_user_deletes", "Number of successful user deletes.");
 var failedUserDeletes = Metrics.CreateCounter("failed_user_deletes", "Number of failed user deletes.");
+var numActiveUsers = Metrics.CreateGauge("num_active_users", "Number of users.");
 
 // Redirect HTTP to HTTPS.
 app.UseHttpsRedirection();
@@ -84,12 +85,14 @@ app.MapPost("/adduser", (User user, HttpContext context) =>
     if (!isValid)
     {
         failedUserAdds.Inc();
+        // Return failure.
         return Results.BadRequest(validationResults);
     }
 
     // Valid user, so add to list of users.
     userList.Add(user);
     successfulUserAdds.Inc();
+    numActiveUsers.Set(userList.Count);
 
     // Confirm that everything's okay.
     string result = $"Received user: FirstName={user.LastName}, LastName={user.FirstName}, Age={user.Age}";
@@ -105,11 +108,15 @@ app.MapPost("/deluser", ([FromBody] DeleteUserRequest request, HttpContext conte
     {
         result = $"No user found with ID {request.UserId}";
         failedUserDeletes.Inc();
+        // Return failure.
         return Results.NotFound(result);
     }
     result = $"Removed user: FirstName={userToRemove.LastName}, LastName={userToRemove.FirstName}, Age={userToRemove.Age}";
     userList.Remove(userToRemove);
     successfulUserDeletes.Inc();
+    numActiveUsers.Set(userList.Count);
+
+    // Return success.
     return Results.Ok(result);
 });
 
