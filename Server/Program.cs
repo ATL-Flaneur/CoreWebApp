@@ -28,8 +28,10 @@ JsonSerializerOptions options = new JsonSerializerOptions
 };
 
 // Define custom Prometheus metrics.
-var failedUserAdds = Metrics.CreateCounter("failed_user_adds", "Number of failed user adds.");
 var successfulUserAdds = Metrics.CreateCounter("successful_user_adds", "Number of successful user adds.");
+var failedUserAdds = Metrics.CreateCounter("failed_user_adds", "Number of failed user adds.");
+var successfulUserDeletes = Metrics.CreateCounter("successful_user_deletes", "Number of successful user deletes.");
+var failedUserDeletes = Metrics.CreateCounter("failed_user_deletes", "Number of failed user deletes.");
 
 // Redirect HTTP to HTTPS.
 app.UseHttpsRedirection();
@@ -102,10 +104,12 @@ app.MapPost("/deluser", ([FromBody] DeleteUserRequest request, HttpContext conte
     if (userToRemove == null)
     {
         result = $"No user found with ID {request.UserId}";
+        failedUserDeletes.Inc();
         return Results.NotFound(result);
     }
     result = $"Removed user: FirstName={userToRemove.LastName}, LastName={userToRemove.FirstName}, Age={userToRemove.Age}";
     userList.Remove(userToRemove);
+    successfulUserDeletes.Inc();
     return Results.Ok(result);
 });
 
@@ -143,6 +147,7 @@ public class User
     }
 }
 
+// Class for parsing user deletion requests.
 public class DeleteUserRequest
 {
     public int UserId { get; set; }
