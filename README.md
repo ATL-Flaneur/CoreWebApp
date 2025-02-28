@@ -85,14 +85,12 @@ cd Server
 sudo docker build -t server:1.0 .
 ```
 
-### Run the container
+### Run the container mapping API and Prometheus ports.
+
+Note that Dockerfile specifies use of port 8080 instead of 5000. This clarifies whether a connection is made to a debug instance or a Docker image.
 
 ```
-sudo docker run -d -p 5000:8080 --name server-container server:1.0
-
-sudo docker run -d -p 3000:3000 -p 5000:5000 -p 9090:9090 --name server-container server:1.0
-
-
+sudo docker run -d -p 8080:8080 --name server-container server:1.0
 ```
 
 Open a browser and navigate to http://localhost:5000/health or run `curl localhost:5000/health` to verify that the app is running.
@@ -105,15 +103,41 @@ Open a browser and navigate to http://localhost:5000/health or run `curl localho
 sudo apt install prometheus -y
 ```
 
-Open a browser and navigate to http://localhost:9090 to view the dashboard.
+Open a browser and navigate to http://localhost:9090 to view the dashboard and available metrics.
 
 ### Configuration
 
 The default configuration file is at `/etc/prometheus/prometheus.yml`
 
-Look for a `scrape_configs:` clause and change the `targets:` line to read: `targets: [localhost:5000]`.
+Look for the `scrape_configs:` clause and add debug and Docker jobs:
 
-Restart Prometheus with:
+```
+scrape_configs:
+
+  - job_name: 'server_debug'
+    scrape_interval: 5s
+    scrape_timeout: 5s
+
+    static_configs:
+      - targets: ['localhost:5000']
+
+  - job_name: 'server_docker'
+    scrape_interval: 5s
+    scrape_timeout: 5s
+
+    static configs:
+      - targets: ['localhost:8080']
+```
+
+This points Prometheus at both instances for attaching to a local Docker container. A variable in the Grafana dashboard will allow switching between them.
+
+Check config file syntax with:
+
+```
+promtool check config /etc/prometheus/prometheus.yml
+```
+
+Fix any mistakes then restart Prometheus:
 
 ```
 sudo systemctl restart prometheus
@@ -167,7 +191,7 @@ sudo systemctl status grafana-server
 
 Open a browser and navigate to http://localhost:9090 to view the dashboard. The default username/password is `admin`/`admin`.
 
-### Configuring Grafana to scrape Prometheus data
+### Configure Grafana to generate data for Prometheus
 
 Open the Grafnana configuration file (substitute your favorite editor for `vi`):
 
@@ -178,7 +202,7 @@ sudo vi /etc/grafana/grafana.ini
 Scroll down to `Internal Grafana Metrics` and uncomment (remove the semicolon) the lines:
 
 ```
-enabled           = true
+enabled = true
 ```
 
 and
@@ -193,7 +217,7 @@ disable_total_stats = false
 sudo systemctl restart grafana-server
 ```
 
-### Configure Prometheus to integrate with Grafana
+### Configure Prometheus to scrape Grafana data (optional)
 
 Open the Prometheus configuration file (substitute your favorite editor for `vi`):
 
@@ -219,7 +243,11 @@ Verify the configuration file:
 promtool check config /etc/prometheus/prometheus.yml
 ```
 
-YAML files are very sensitive to indentation and alignment.
+Fix any mistakes then restart Prometheus:
+
+```
+sudo systemctl restart prometheus
+```
 
 ### Restart Prometheus
 
