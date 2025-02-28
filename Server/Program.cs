@@ -140,12 +140,12 @@ public class User
 
     [Required(ErrorMessage = "ID is required.")]
     [Range(0, int.MaxValue, ErrorMessage = "ID is a non-negative integer.")]
-    public int Id  { get; set; }
+    public int Id { get; set; }
 
     // First user is 0, then 1, etc.
     private static int nextId = 0;
 
-    public User (String firstName, String lastName, int age)
+    public User(String firstName, String lastName, int age)
     {
         FirstName = firstName;
         LastName = lastName;
