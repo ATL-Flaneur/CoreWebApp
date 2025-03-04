@@ -18,6 +18,12 @@ See the Docker section installing packages to build/run a Dockerized version.
 
 Returns a 200 status code if the app is running.
 
+Example:
+
+```
+curl -X GET http://localhost:5000/health 
+```
+
 ### /metrics
 
 Returns Prometheus metrics.
@@ -28,15 +34,37 @@ Custom metrics include:
 * `failed_user_adds`: Number of failed user adds (counter)
 * `successful_user_deletes`: Number of successful user deletes (counter)
 * `failed_user_deletes`: Number of failed user deletes (counter)
+* `successful_user_clears`: Number of successful user deletes (counter)
+* `failed_user_clears`: Number of failed user deletes (counter)
 * `num_active_users`: Number of users (gauge)
+
+Example:
+
+```
+curl -X GET http://localhost:5000/metrics 
+```
+
+Best queried from Prometheus or Grafana!
 
 ### /stats
 
 Returns CPU usage, processor count, OS version, and number of users.
 
+Example:
+
+```
+curl -X GET http://localhost:5000/stats 
+```
+
 ### /getusers
 
 Returns the name and age of users who have been added to the system along with an integer user ID.
+
+Example:
+
+```
+curl -X GET http://localhost:5000/getusers 
+```
 
 ### /adduser
 
@@ -62,6 +90,19 @@ curl -X POST \
 -H "Content-Type: application/json" \
 -d '{"userId":0}' \
 http://localhost:5000/deluser
+```
+
+### /clearusers
+
+Clear the user list. Pass in the current number of users via NumUsers as a safety check.
+
+Example (currently 10 users):
+
+```
+curl -X POST \
+-H "Content-Type: application/json" \
+-d '{"numUsers":10}' \
+http://localhost:5000/clearusers
 ```
 
 ## Docker
@@ -92,11 +133,16 @@ Install Docker engine:
 sudo apt install -y docker-ce docker-ce-cli containerd.io
 ```
 
-### Build the container
+### Make sure that the login user can run Docker.
+
+  338  getent group docker
+  339  sudo usermod -aG docker ayank
+
+### Build the container.
 
 ```
 cd Server
-sudo docker build -t server:1.0 .
+sudo docker build -t server:latest .
 ```
 
 ### Run the container mapping API and Prometheus ports.
@@ -104,10 +150,12 @@ sudo docker build -t server:1.0 .
 Note that Dockerfile specifies use of port 8080 instead of 5000. This clarifies whether a connection is made to a debug instance or a Docker image.
 
 ```
-sudo docker run -d -p 8080:8080 --name server-container server:1.0
+docker run -d -p 8080:8080 --name server-container server:1.0
 ```
 
-Open a browser and navigate to http://localhost:5000/health or run `curl localhost:5000/health` to verify that the app is running.
+Open a browser and navigate to http://localhost:8080/health or run `curl localhost:8080/health` to verify that the app is running.
+
+
 
 ## Prometheus
 
