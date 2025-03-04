@@ -199,6 +199,7 @@ public class UserList
         }
     }
 
+    // Add a user to the list.
     public void Remove(User userToRemove)
     {
         lock (_lock)
@@ -239,7 +240,7 @@ public class UserList
         }
     }
 
-    // Number of elements in the list.
+    // Get the number of elements in the list.
     public int Count
     {
         get
@@ -262,6 +263,7 @@ public class UserList
         }
     }
 
+    // Return the list as an array.
     public User[] ToArray()
     {
         lock (_lock)
