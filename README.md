@@ -360,4 +360,4 @@ From the Grafana main dashboard at *http://localhost:3000*, click the menu icon 
 
 The *Server* dashboard has a *job* dropdown that allows switching between *server_docker* and *server_debug*. Choose *server_docker* for connecting to the Docker instance.
 
-The *curl* commands in [APIs](#-APIs) can be used to 
+The *curl* commands in [APIs](#-APIs) can be used to hit the web APIs and move the statistics.
