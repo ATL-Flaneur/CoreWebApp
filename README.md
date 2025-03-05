@@ -4,15 +4,19 @@ This is a simple C# ASP.NET Core web app developed to show creation of web APIs,
 
 These instructions assume the use of Ubuntu Linux but should work on other Debian-based distributions.
 
+The app has APIs for adding/removing users from a user list along with gathering statistics. 
+
 ## Prerequisites
 
-Install .NET 9 machine with:
+Install .NET 9 virtual machine with:
 
 `sudo apt install -y dotnet-sdk-9.0`
 
-See the Docker section installing packages to build/run a Dockerized version.
+See the [Docker](#Docker) section packages needed to build/run a Dockerized version.
 
 ## APIs
+
+By default, the app runs on port 5000 as a VS Code debug process and port 8080 when Dockerized. Change "8080" to "5000" when running the `curl` examples against a VS Code debug instance.
 
 ### /health
 
@@ -21,7 +25,7 @@ Returns a 200 status code if the app is running.
 Example:
 
 ```
-curl -X GET http://localhost:5000/health 
+curl http://localhost:8080/health 
 ```
 
 ### /metrics
@@ -41,7 +45,7 @@ Custom metrics include:
 Example:
 
 ```
-curl -X GET http://localhost:5000/metrics 
+curl http://localhost:8080/metrics 
 ```
 
 Best queried from Prometheus or Grafana!
@@ -53,7 +57,7 @@ Returns CPU usage, processor count, OS version, and number of users.
 Example:
 
 ```
-curl -X GET http://localhost:5000/stats 
+curl http://localhost:8080/stats 
 ```
 
 ### /getusers
@@ -63,7 +67,7 @@ Returns the name and age of users who have been added to the system along with a
 Example:
 
 ```
-curl -X GET http://localhost:5000/getusers 
+curl http://localhost:8080/getusers 
 ```
 
 ### /adduser
@@ -73,10 +77,7 @@ Add a user to the system with firstName, lastName, and age.
 Example:
 
 ```
-curl -X POST \
--H "Content-Type: application/json" \
--d '{"firstName":"John", "lastName":"Smith", "age":42}' \
-http://localhost:5000/adduser
+curl -X POST  -H "Content-Type: application/json" -d '{"firstName":"John", "lastName":"Smith", "age":42}' http://localhost:8080/adduser
 ```
 
 ### /deluser
@@ -86,10 +87,7 @@ Remove a user with the specified user ID.
 Example:
 
 ```
-curl -X POST \
--H "Content-Type: application/json" \
--d '{"userId":0}' \
-http://localhost:5000/deluser
+curl -X POST -H "Content-Type: application/json" -d '{"userId":0}' http://localhost:8080/deluser
 ```
 
 ### /clearusers
@@ -99,13 +97,27 @@ Clear the user list. Pass in the current number of users via NumUsers as a safet
 Example (currently 10 users):
 
 ```
-curl -X POST \
--H "Content-Type: application/json" \
--d '{"numUsers":10}' \
-http://localhost:5000/clearusers
+curl -X POST -H "Content-Type: application/json" -d '{"numUsers":10}' http://localhost:8080/clearusers
 ```
 
 ## Docker
+
+### Installation check
+
+See if Docker is installed:
+
+```
+command -v docker
+```
+
+If so, check that it's runnable by the current user:
+
+```
+docker --version
+```
+
+If both these checks pass, then jump down to [Build the container](#Build-the-container). If Docker is installed but is not runnable by the current user, then either preface the `docker` commands with `sudo` or follow the instructions in [Make sure Docker is runnable by the user](#Make-sure-Docker-is-runnable-by-the-user).
+
 
 ### Prep the machine
 
@@ -133,29 +145,46 @@ Install Docker engine:
 sudo apt install -y docker-ce docker-ce-cli containerd.io
 ```
 
-### Make sure that the login user can run Docker.
+### Make sure Docker is runnable by the user
 
-  338  getent group docker
-  339  sudo usermod -aG docker ayank
+Check if the login user is already a member of the `docker` group:
 
-### Build the container.
+```
+groups | grep docker
+```
+
+If so, skip to [Build the container](#Build-the-container). If not, first check that the `docker` group exists:
+
+```
+getent group docker
+```
+
+Troubleshooting the non-existance of the `docker` group is out of scope of this README.
+
+Then, add the user to the `docker` group with:
+
+```
+sudo usermod -aG docker $USER
+```
+
+Log out and log back in again to put the change into effect.
+
+### Build the container
 
 ```
 cd Server
-sudo docker build -t server:latest .
+docker build -t server:latest .
 ```
 
-### Run the container mapping API and Prometheus ports.
+### Run the container mapping API and Prometheus ports
 
-Note that Dockerfile specifies use of port 8080 instead of 5000. This clarifies whether a connection is made to a debug instance or a Docker image.
+Note that both launchSettings.json and Dockerfile specify use of port 8080. Make sure you're talking to the correct one!
 
 ```
-docker run -d -p 8080:8080 --name server-container server:1.0
+docker run -d -p 8080:8080 --name server-container server:latest
 ```
 
 Open a browser and navigate to http://localhost:8080/health or run `curl localhost:8080/health` to verify that the app is running.
-
-
 
 ## Prometheus
 
@@ -164,8 +193,6 @@ Open a browser and navigate to http://localhost:8080/health or run `curl localho
 ```
 sudo apt install prometheus -y
 ```
-
-Open a browser and navigate to http://localhost:9090 to view the dashboard and available metrics.
 
 ### Configuration
 
@@ -204,6 +231,12 @@ Fix any mistakes then restart Prometheus:
 ```
 sudo systemctl restart prometheus
 ```
+
+### Checking Prometheus metrics
+
+Open a browser and navigate to http://localhost:9090/classic/targets to view available endpoints.
+
+Target *server_docker* should appear in blue indicating a connection if the Docker container is running. Running the app in via the VS Code debugger will activate the *server_debug* target.
 
 ## Grafana
 
@@ -251,7 +284,7 @@ sudo systemctl status grafana-server
 
 ### Connecting to Grafana
 
-Open a browser and navigate to http://localhost:9090 to view the dashboard. The default username/password is `admin`/`admin`.
+Open a browser and navigate to http://localhost:3000 to view the dashboard. The default username/password is `admin`/`admin`.
 
 ### Configure Grafana to generate data for Prometheus
 
@@ -273,6 +306,8 @@ and
 disable_total_stats = false
 ```
 
+Note that these metrics aren't scraped for the dashboard that will be loaded later.
+
 ### Restart Grafana
 
 ```
@@ -292,7 +327,7 @@ Scroll down to the bottom and add a new job:
 ```
   - job_name: 'grafana_metrics'
 
-    scrape_interval: 15s
+    scrape_interval: 5s
     scrape_timeout: 5s
 
     static_configs:
@@ -321,3 +356,8 @@ sudo systemctl restart prometheus
 
 ### Viewing metrics
 
+From the Grafana main dashboard at *http://localhost:3000*, click the menu icon in the top-left corner and select *dashboards*. Click *new* then *import*. Import the *server-dashboard.json* file from the *./dashboards* directory either by dragging it onto upload widget on the web page or opening it in a text editor and copying the JSON into the text widget.
+
+The *Server* dashboard has a *job* dropdown that allows switching between *server_docker* and *server_debug*. Choose *server_docker* for connecting to the Docker instance.
+
+The *curl* commands in [APIs](#-APIs) can be used to 
