@@ -1,10 +1,11 @@
 # CoreWebApp
 
-This is a simple C# ASP.NET Core web app developed to show creation of web APIs, export of Prometheus metrics, Dockerization of the app, and using Grafana to query Prometheus and display the metrics on dashboard.
+This is a simple C# ASP.NET Core web app developed to show creation of web APIs, export of Prometheus metrics, Dockerization of the app, and using Grafana to display Prometheus metrics on a adashboard.
+
+The app has APIs for adding/removing users from a user list and gathering statistics. These are described in [APIs](#APIs).
 
 These instructions assume the use of Ubuntu Linux but should work on other Debian-based distributions.
 
-The app has APIs for adding/removing users from a user list along with gathering statistics. 
 
 ## Prerequisites
 
@@ -360,4 +361,4 @@ From the Grafana main dashboard at *http://localhost:3000*, click the menu icon 
 
 The *Server* dashboard has a *job* dropdown that allows switching between *server_docker* and *server_debug*. Choose *server_docker* for connecting to the Docker instance.
 
-The *curl* commands in [APIs](#-APIs) can be used to hit the web APIs and move the statistics.
+The *curl* commands in [APIs](#APIs) can be used to hit the web APIs and move the statistics.
