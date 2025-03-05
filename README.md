@@ -9,15 +9,17 @@ These instructions assume the use of Ubuntu Linux but should work on other Debia
 
 ## Prerequisites
 
-Install .NET 9 virtual machine with:
+Install the .NET 9 virtual machine and *curl* with:
 
-`sudo apt install -y dotnet-sdk-9.0`
+```
+sudo apt install -y dotnet-sdk-9.0 curl
+```
 
 See the [Docker](#Docker) section packages needed to build/run a Dockerized version.
 
 ## APIs
 
-By default, the app runs on port 5000 as a VS Code debug process and port 8080 when Dockerized. Change "8080" to "5000" when running the `curl` examples against a VS Code debug instance.
+By default, the app runs on port 5000 as a VS Code debug process and port 8080 when Dockerized. Change "8080" to "5000" when running the `curl` examples below against a VS Code debug instance.
 
 ### /health
 
@@ -111,14 +113,13 @@ See if Docker is installed:
 command -v docker
 ```
 
-If so, check that it's runnable by the current user:
+If so, check that the user is a member of the *docker* group, which is needed for running containers:
 
 ```
-docker --version
+groups | grep docker
 ```
 
-If both these checks pass, then jump down to [Build the container](#Build-the-container). If Docker is installed but is not runnable by the current user, then either preface the `docker` commands with `sudo` or follow the instructions in [Make sure Docker is runnable by the user](#Make-sure-Docker-is-runnable-by-the-user).
-
+If both these checks pass, then jump down to [Build the container](#Build-the-container). If Docker is installed but not runnable by the current user, then either preface the `docker` commands with `sudo` or follow the instructions in [Verify Docker can be run by the user](#Verify-Docker-can-be-run-by-the-user).
 
 ### Prep the machine
 
@@ -131,7 +132,7 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o 
 Add the Docker repository:
 
 ```
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 ```
 
 Update the package index:
@@ -146,7 +147,7 @@ Install Docker engine:
 sudo apt install -y docker-ce docker-ce-cli containerd.io
 ```
 
-### Make sure Docker is runnable by the user
+### Verify Docker can be run by the user
 
 Check if the login user is already a member of the `docker` group:
 
@@ -173,7 +174,7 @@ Log out and log back in again to put the change into effect.
 ### Build the container
 
 ```
-cd Server
+cd CoreWebApp/Server
 docker build -t server:latest .
 ```
 
@@ -252,8 +253,7 @@ curl -fsSL https://apt.grafana.com/gpg.key | sudo gpg --dearmor -o /etc/apt/keyr
 Add the Grafana stable repository:
 
 ```
-echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list 
-
+echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list > /dev/null
 ```
 
 Update the package index:
