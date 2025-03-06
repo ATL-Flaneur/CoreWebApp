@@ -96,7 +96,7 @@ curl -X POST -H "Content-Type: application/json" -d '{"userId":0}' http://localh
 
 ### /clearusers
 
-Clear the user list. Pass in the current number of users via NumUsers as a safety check.
+Clear the user list. Pass in the current number of users (obtainable via the *stats* API) via NumUsers as a safety check.
 
 Example (currently 10 users):
 
