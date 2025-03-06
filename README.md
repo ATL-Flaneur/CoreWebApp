@@ -338,6 +338,10 @@ Click the menu icon in the top-left corner and select *dashboards*. Click *new* 
 
 The *job* dropdown should allow selecting between *server_docker*, *server_debug*, and any other configured data sources.
 
+The dashboard should appear as follows:
+
+![Example dashboard](./images/dashboard.png "Example Dashboard")
+
 ### Updating metrics
 
 The *curl* commands in [APIs](#APIs) can be used to hit the web APIs and move the statistics. Use port 8080 if running Server in a Docker container or 5000 if running in VS Code.
