@@ -204,7 +204,7 @@ Open the Prometheus configuration file (substitute your favorite editor for `vi`
 sudo vi /etc/prometheus/prometheus.yml
 ```
 
-There will likely be default jobs called *prometheus* and *node*. Add *server_debug* and *server_docker* jobs after them as follows, being extremely careful to respect spacing and indentation:
+Scroll down to the *scrape_configs:* section at the bottom of the file. There will likely already be jobs called *prometheus* and *node*. Add *server_debug* and *server_docker* jobs after them as follows, being extremely careful to respect spacing and indentation:
 
 ```
 scrape_configs:
@@ -218,6 +218,7 @@ scrape_configs:
       - targets: ['localhost:5000']
 
   - job_name: 'server_docker'
+
     scrape_interval: 5s
     scrape_timeout: 5s
 
@@ -297,7 +298,7 @@ Verify that Grafana is running by opening a browser and navigating to http://loc
 
 ### Configure a data source for the Server app
 
-From the Grafana main dashboard at *http://localhost:3000*, click the menu icon in the top-left corner and select *Connections*. Type *Prometheus* into the search bar, then click on the *Prometheus* icon that appears in the *Data sources* panel. Click on the *Add data source* button that appears in the top-right corner of the screen.
+From the Grafana main dashboard, click the spiral menu icon in the top-left corner and select *Connections*. Type *Prometheus* into the search bar, then click on the *Prometheus* icon that appears in the *Data sources* panel. Click on the *Add data source* button that appears in the top-right corner of the screen.
 
 Get the UID of the data source from the page URL. For example, if the URL is:
 
@@ -311,7 +312,13 @@ Type in a descriptive name like *Prometheus Server* for the data source and spec
 
 ### Map UIDs in Server dashboard
 
-Open a terminal window an *cd* to *~/CoreWebApp/dashboards*. Then type:
+Open a terminal window an *cd* to *~/CoreWebApp/dashboards*.
+
+```
+cd ~/CoreWebApp/dashboards
+```
+
+Then type:
 
 ```
 grep uid server_dashboard.json
@@ -327,7 +334,7 @@ sed 's/cee25gg4nj9xcc/eef1ehsondx4wc/g' server_dashboard.json > my_server_dashbo
 
 ### Import the Server dashboard
 
-Click the menu icon in the top-left corner and select *dashboards*. Click *new* then *import*. Import *my_server_dashboard.json* file from the *./dashboards* directory either by dragging it onto upload widget or opening it in a text editor and copying the JSON into the text widget. Don't change the UID. Then click *Import* You'll likely get a screen with four panels displaying *No data*. Refresh the page to begin displaying data.
+Click the menu icon in the top-left corner and select *dashboards*. Click *new* then *import*. Import *my_server_dashboard.json* file from the *./dashboards* directory either by dragging it onto upload widget or opening it in a text editor and copying the JSON into the text widget. Don't change the UID. Then click *Import* The dashboard may initially render with panels displaying *No data* messages. If so, refresh the page to begin displaying data.
 
 The *job* dropdown should allow selecting between *server_docker*, *server_debug*, and any other configured data sources.
 

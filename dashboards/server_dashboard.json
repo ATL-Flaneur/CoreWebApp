@@ -491,7 +491,7 @@
             "uid": "cee25gg4nj9xcc"
           },
           "editorMode": "code",
-          "expr": "sum(increase(http_requests_received_total{method=\"POST\", job=\"$job\"}[5m]))",
+          "expr": "sum(increase(http_requests_received_total{method=\"POST\", job=\"$job\"}[5m])) or vector(0)",
           "instant": false,
           "legendFormat": "POST (5 min)",
           "range": true,
@@ -503,7 +503,7 @@
             "uid": "cee25gg4nj9xcc"
           },
           "editorMode": "code",
-          "expr": "sum(increase(http_requests_received_total{method=\"GET\", job=\"$job\"}[5m]))",
+          "expr": "sum(increase(http_requests_received_total{method=\"GET\", job=\"$job\"}[5m])) or vector(0)",
           "hide": false,
           "instant": false,
           "legendFormat": "GET (5 min)",
