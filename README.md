@@ -82,7 +82,7 @@ Example:
 curl -X POST  -H "Content-Type: application/json" -d '{"firstName":"Fred", "lastName":"Foobar", "age":42}' http://localhost:8080/adduser
 ```
 
-Users are internally assigned IDs starting with 0. A userlist with IDs for each user may be obtained with the *getusers* API.
+Users are internally assigned IDs starting with 0. A userlist with IDs for each user may be obtained with the *getusers* API. Returning the ID in the response to this call is a planned optimization.
 
 ### /deluser
 
