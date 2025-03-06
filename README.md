@@ -1,11 +1,10 @@
 # CoreWebApp
 
-This is a simple C# ASP.NET Core web app developed to show creation of web APIs, export of Prometheus metrics, Dockerization of the app, and using Grafana to display Prometheus metrics on a adashboard.
+This is a simple C# ASP.NET Core web app developed to show creation of web APIs, export of Prometheus metrics, Dockerization of the app, and use of Grafana to display Prometheus metrics on a adashboard.
 
 The app has APIs for adding/removing users from a user list and gathering statistics. These are described in [APIs](#APIs).
 
 These instructions assume the use of Ubuntu Linux but should work on other Debian-based distributions.
-
 
 ## Prerequisites
 
@@ -19,7 +18,7 @@ See the [Docker](#Docker) section packages needed to build/run a Dockerized vers
 
 ## APIs
 
-By default, the app runs on port 5000 as a VS Code debug process and port 8080 when Dockerized. Change "8080" to "5000" when running the `curl` examples below against a VS Code debug instance.
+By default, the app runs on port 5000 as a VS Code debug process and port 8080 when Dockerized. Change "8080" to "5000" when running the `curl` examples below when running with a VS Code debug instance.
 
 ### /health
 
@@ -82,6 +81,8 @@ Example:
 ```
 curl -X POST  -H "Content-Type: application/json" -d '{"firstName":"Fred", "lastName":"Foobar", "age":42}' http://localhost:8080/adduser
 ```
+
+Users are internally assigned IDs starting with 0. A userlist with IDs for each user may be obtained with the *getusers* API.
 
 ### /deluser
 
