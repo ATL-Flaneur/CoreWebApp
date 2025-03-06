@@ -80,7 +80,7 @@ Add a user to the system with firstName, lastName, and age.
 Example:
 
 ```
-curl -X POST  -H "Content-Type: application/json" -d '{"firstName":"John", "lastName":"Smith", "age":42}' http://localhost:8080/adduser
+curl -X POST  -H "Content-Type: application/json" -d '{"firstName":"Fred", "lastName":"Foobar", "age":42}' http://localhost:8080/adduser
 ```
 
 ### /deluser
@@ -178,15 +178,15 @@ cd CoreWebApp/Server
 docker build -t server:latest .
 ```
 
-### Run the container mapping API and Prometheus ports
+### Run the container mapping API ports
 
-Note that both launchSettings.json and Dockerfile specify use of port 8080. Make sure you're talking to the correct one!
+The Dockerfile specifies running the APIs on port 8080, so map this port between the container and localhost:
 
 ```
 docker run -d -p 8080:8080 --name server-container server:latest
 ```
 
-Open a browser and navigate to http://localhost:8080/health or run `curl localhost:8080/health` to verify that the app is running.
+Open a browser and navigate to http://localhost:8080/health or run `curl localhost:8080/health` to verify that the app is running in the container.
 
 ## Prometheus
 
@@ -198,14 +198,19 @@ sudo apt install prometheus -y
 
 ### Configuration
 
-The default configuration file is at `/etc/prometheus/prometheus.yml`
+Open the Prometheus configuration file (substitute your favorite editor for `vi`):
 
-Look for the `scrape_configs:` clause and add debug and Docker jobs:
+```
+sudo vi /etc/prometheus/prometheus.yml
+```
+
+There will likely be default jobs called *prometheus* and *node*. Add *server_debug* and *server_docker* jobs after them as follows, being extremely careful to respect spacing and indentation:
 
 ```
 scrape_configs:
 
   - job_name: 'server_debug'
+
     scrape_interval: 5s
     scrape_timeout: 5s
 
@@ -216,11 +221,13 @@ scrape_configs:
     scrape_interval: 5s
     scrape_timeout: 5s
 
-    static configs:
+    static_configs:
       - targets: ['localhost:8080']
 ```
 
-This points Prometheus at both instances for attaching to a local Docker container. A variable in the Grafana dashboard will allow switching between them.
+This points Prometheus at both VS Code debug and Docker instances. A variable in the Grafana dashboard will allow switching between them.
+
+Save the file and exit the editor.
 
 Check config file syntax with:
 
@@ -228,17 +235,18 @@ Check config file syntax with:
 promtool check config /etc/prometheus/prometheus.yml
 ```
 
-Fix any mistakes then restart Prometheus:
+Fix any mistakes, then restart Prometheus and check that it's running:
 
 ```
 sudo systemctl restart prometheus
+sudo systemctl status prometheus
 ```
 
 ### Checking Prometheus metrics
 
 Open a browser and navigate to http://localhost:9090/classic/targets to view available endpoints.
 
-Target *server_docker* should appear in blue indicating a connection if the Docker container is running. Running the app in via the VS Code debugger will activate the *server_debug* target.
+Target *server_docker* should appear in blue indicating a connection if the Docker container is running. Running the app in the VS Code debugger will activate the *server_debug* target.
 
 ## Grafana
 
@@ -285,7 +293,57 @@ sudo systemctl status grafana-server
 
 ### Connecting to Grafana
 
-Open a browser and navigate to http://localhost:3000 to view the dashboard. The default username/password is `admin`/`admin`.
+Verify that Grafana is running by opening a browser and navigating to http://localhost:3000 to view the dashboard. The default username/password is `admin`/`admin`. You can choose a stronger password if you wish, otherwise click *Skip* at the bottom of the password-change form. This should bring you to a *Welcome to Grafana* page.
+
+### Configure a data source for the Server app
+
+From the Grafana main dashboard at *http://localhost:3000*, click the menu icon in the top-left corner and select *Connections*. Type *Prometheus* into the search bar, then click on the *Prometheus* icon that appears in the *Data sources* panel. Click on the *Add data source* button that appears in the top-right corner of the screen.
+
+Get the UID of the data source from the page URL. For example, if the URL is:
+
+```
+http://localhost:3000/connections/datasources/edit/bef1irc8cho1sc
+```
+
+Then the UID is *bef1irc8cho1sc*. This will be needed shortly.
+
+Type in a descriptive name like *Prometheus Server* for the data source and specify *http://localhost:9090* for the server URL. Scroll to the bottom of the page and click *Save and test*. A message *Successfully queried the Prometheus API.* should pop up in green.
+
+### Map UIDs in Server dashboard
+
+Open a terminal window an *cd* to *~/CoreWebApp/dashboards*. Then type:
+
+```
+grep uid server_dashboard.json
+```
+
+The top UID should say *"-- Grafana --"* and the bottom UID will be for the dashboard. In between should be the same UID repeated multiple times at different levels of indentation, such as *"uid": "cee25gg4nj9xcc"*.
+
+Create a new JSON file with the datasource UID updated to the one created in the prevsious section. Replace *cee25gg4nj9xcc* with the UID from the file and *eef1ehsondx4wc* with the UID from the URL.
+
+```
+sed 's/cee25gg4nj9xcc/eef1ehsondx4wc/g' server_dashboard.json > my_server_dashboard.json
+```
+
+### Import the Server dashboard
+
+Click the menu icon in the top-left corner and select *dashboards*. Click *new* then *import*. Import *my_server_dashboard.json* file from the *./dashboards* directory either by dragging it onto upload widget or opening it in a text editor and copying the JSON into the text widget. Don't change the UID. Then click *Import* You'll likely get a screen with four panels displaying *No data*. Refresh the page to begin displaying data.
+
+The *job* dropdown should allow selecting between *server_docker*, *server_debug*, and any other configured data sources.
+
+### Updating metrics
+
+The *curl* commands in [APIs](#APIs) can be used to hit the web APIs and move the statistics. Use port 8080 if running Server in a Docker container or 5000 if running in VS Code.
+
+For example, typing the following should increase *Successful Adds* and *Active Users* along with *POST (5 min)*:
+
+```
+curl -X POST  -H "Content-Type: application/json" -d '{"firstName":"Fred", "lastName":"Foobar", "age":42}' http://localhost:8080/adduser
+```
+
+## Optional configuration
+
+This section covers exchanging metrics between Grafana and Prometheus. They're not scraped for the *System Stats* dashboard loaded earlier.
 
 ### Configure Grafana to generate data for Prometheus
 
@@ -307,15 +365,14 @@ and
 disable_total_stats = false
 ```
 
-Note that these metrics aren't scraped for the dashboard that will be loaded later.
-
-### Restart Grafana
+Then, restart Grafana and verify that it's running:
 
 ```
 sudo systemctl restart grafana-server
+sudo systemctl status grafana-server
 ```
 
-### Configure Prometheus to scrape Grafana data (optional)
+### Configure Prometheus to scrape Grafana data
 
 Open the Prometheus configuration file (substitute your favorite editor for `vi`):
 
@@ -341,24 +398,9 @@ Verify the configuration file:
 promtool check config /etc/prometheus/prometheus.yml
 ```
 
-Fix any mistakes then restart Prometheus:
+Fix any mistakes then restart Prometheus and check that it's running:
 
 ```
 sudo systemctl restart prometheus
+sudo systemctl status prometheus
 ```
-
-### Restart Prometheus
-
-Restart Prometheus to reload configuration.
-
-```
-sudo systemctl restart prometheus
-```
-
-### Viewing metrics
-
-From the Grafana main dashboard at *http://localhost:3000*, click the menu icon in the top-left corner and select *dashboards*. Click *new* then *import*. Import the *server-dashboard.json* file from the *./dashboards* directory either by dragging it onto upload widget on the web page or opening it in a text editor and copying the JSON into the text widget.
-
-The *Server* dashboard has a *job* dropdown that allows switching between *server_docker* and *server_debug*. Choose *server_docker* for connecting to the Docker instance.
-
-The *curl* commands in [APIs](#APIs) can be used to hit the web APIs and move the statistics.
