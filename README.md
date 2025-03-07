@@ -1,10 +1,8 @@
 # CoreWebApp
 
-This is a simple C# ASP.NET Core web app developed to show creation of web APIs, exporting of Prometheus metrics, Dockerization of the app, and visualizing metrics with a Grafana dashboard.
+This is a simple C# ASP.NET Core web app developed to show creation of web APIs, exporting of Prometheus metrics, Dockerization of the app, and visualizing metrics with a Grafana dashboard. It includes APIs for managing a user list, custom Prometheus metrics, and a Dockerized deployment. Instructions are tested on Ubuntu Linux, and other operating systems may require adjusted commands.
 
-The app has APIs for adding/removing users from a user list and gathering statistics. These are described in [APIs](#APIs).
-
-These instructions assume the use of Ubuntu Linux but should work on other Debian-based distributions.
+The APIs are described in [APIs](#APIs).
 
 ## Prerequisites
 
@@ -20,6 +18,7 @@ See the [Docker](#Docker) section for packages needed to build/run a Dockerized 
 ## APIs
 
 API ports:
+
 - **VS Code Debug**: Port `5000`
 - **Dockerized**: Port `8080` (default for examples below)
 
@@ -127,7 +126,9 @@ groups | grep docker
 
 If both these checks pass, then jump down to [Build the container](#Build-the-container). If Docker is installed but not runnable by the current user, then either preface the `docker` commands with `sudo` or follow the instructions in [Verify Docker can be run by the user](#Verify-Docker-can-be-run-by-the-user).
 
-### Prep the machine
+### Install Docker
+
+Follow the instructions in this section to install Docker. See [Docker docs](https://docs.docker.com/engine/install/ubuntu/) for detailed installation help.
 
 Install the Docker GPG key:
 
@@ -184,7 +185,7 @@ cd CoreWebApp/Server
 docker build -t server:latest .
 ```
 
-### Run the container mapping API ports
+### Run the container and map API ports
 
 The Dockerfile specifies running the APIs on port 8080, so map this port between the container and localhost:
 
