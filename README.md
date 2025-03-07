@@ -1,6 +1,6 @@
 # CoreWebApp
 
-This is a simple C# ASP.NET Core web app developed to show creation of web APIs, export of Prometheus metrics, Dockerization of the app, and use of Grafana to display Prometheus metrics on a adashboard.
+This is a simple C# ASP.NET Core web app developed to show creation of web APIs, exporting of Prometheus metrics, Dockerization of the app, and visualizing metrics with a Grafana dashboard.
 
 The app has APIs for adding/removing users from a user list and gathering statistics. These are described in [APIs](#APIs).
 
@@ -14,11 +14,16 @@ Install the .NET 9 virtual machine and *curl* with:
 sudo apt install -y dotnet-sdk-9.0 curl
 ```
 
-See the [Docker](#Docker) section packages needed to build/run a Dockerized version.
+See the [Docker](#Docker) section for packages needed to build/run a Dockerized version.
+
 
 ## APIs
 
-By default, the app runs on port 5000 as a VS Code debug process and port 8080 when Dockerized. Change "8080" to "5000" when running the `curl` examples below when running with a VS Code debug instance.
+API ports:
+- **VS Code Debug**: Port `5000`
+- **Dockerized**: Port `8080` (default for examples below)
+
+Replace "8080" with "5000" in `curl` commands when running in VS Code.
 
 ### /health
 
@@ -82,7 +87,7 @@ Example:
 curl -X POST  -H "Content-Type: application/json" -d '{"firstName":"Fred", "lastName":"Foobar", "age":42}' http://localhost:8080/adduser
 ```
 
-Users are internally assigned IDs starting with 0. A userlist with IDs for each user may be obtained with the *getusers* API. Returning the ID in the response to this call is a planned optimization.
+Users are internally assigned IDs starting with 0. A userlist with IDs for each user may be obtained with the *getusers* API. Returning the ID in the response to this call is omitted for simplicity in this demo but planned for the future.
 
 ### /deluser
 
@@ -205,7 +210,7 @@ Open the Prometheus configuration file (substitute your favorite editor for `vi`
 sudo vi /etc/prometheus/prometheus.yml
 ```
 
-Scroll down to the *scrape_configs:* section at the bottom of the file. There will likely already be jobs called *prometheus* and *node*. Add *server_debug* and *server_docker* jobs after them as follows, being extremely careful to respect spacing and indentation:
+Scroll down to the *scrape_configs:* section at the bottom of the file. There will likely already be jobs called *prometheus* and *node*. Add *server_debug* and *server_docker* jobs after them as follows, and ensure proper YAML indentation (2 spaces) to avoid errors:
 
 ```
 scrape_configs:
@@ -327,7 +332,7 @@ grep uid server_dashboard.json
 
 The top UID should say *"-- Grafana --"* and the bottom UID will be for the dashboard. In between should be the same UID repeated multiple times at different levels of indentation, such as *"uid": "cee25gg4nj9xcc"*.
 
-Create a new JSON file with the datasource UID updated to the one created in the prevsious section. Replace *cee25gg4nj9xcc* with the UID from the file and *eef1ehsondx4wc* with the UID from the URL.
+Create a new JSON file with the datasource UID updated to the one created in the previous section. Replace the placeholder UID (e.g., `cee25gg4nj9xcc`) in `server_dashboard.json` with your data source UID (e.g., `bef1irc8cho1sc`) using:
 
 ```
 sed 's/cee25gg4nj9xcc/eef1ehsondx4wc/g' server_dashboard.json > my_server_dashboard.json
@@ -355,11 +360,11 @@ curl -X POST  -H "Content-Type: application/json" -d '{"firstName":"Fred", "last
 
 ## Optional configuration
 
-This section covers exchanging metrics between Grafana and Prometheus. They're not scraped for the *System Stats* dashboard loaded earlier.
+This optional section enables Grafana to expose its own metrics to Prometheus, enhancing monitoring capabilities. They're not scraped for the *System Stats* dashboard loaded earlier.
 
 ### Configure Grafana to generate data for Prometheus
 
-Open the Grafnana configuration file (substitute your favorite editor for `vi`):
+Open the Grafana configuration file (substitute your favorite editor for `vi`):
 
 ```
 sudo vi /etc/grafana/grafana.ini
@@ -416,3 +421,5 @@ Fix any mistakes then restart Prometheus and check that it's running:
 sudo systemctl restart prometheus
 sudo systemctl status prometheus
 ```
+
+
