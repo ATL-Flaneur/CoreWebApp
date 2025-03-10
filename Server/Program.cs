@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations;
 using Prometheus;
 using Microsoft.AspNetCore.Mvc;
 
-
 // Need $ dotnet add package prometheus-net.AspNetCore
 
 // Instantiate a web application builder object.
@@ -54,126 +53,166 @@ app.UseHttpMetrics();
 
 // Return system health. If the app is running, it's healthy.
 // TODO: migrate to app.MapHealthChecks()
-app.MapGet("/health", async context =>
+app.MapGet("/health", (HttpContext context) =>
 {
-    context.Response.StatusCode = 200;
-    context.Response.ContentType = "application/json";
-    var data = new { Message = "OK" };
-    await JsonSerializer.SerializeAsync(context.Response.Body, data, options);
+    return Results.Ok("OK");
 });
 
 // GET command for system stats.
-app.MapGet("/stats", async context =>
+app.MapGet("/stats", (HttpContext context) =>
 {
     var cpuUsage = System.Environment.CpuUsage;
     var processorCount = System.Environment.ProcessorCount;
     var osVersion = System.Environment.OSVersion;
     var numUsers = userList.Count;
 
-    var data = new { CpuUsage = cpuUsage, ProcessorCount = processorCount, OSVersion = osVersion, NumUsers = numUsers };
-
-    await JsonSerializer.SerializeAsync(context.Response.Body, data, options);
+    return Results.Ok(new
+    {
+        CpuUsage = cpuUsage,
+        ProcessorCount = processorCount,
+        OSVersion = osVersion,
+        NumUsers = numUsers
+    });
 });
 
 // GET command for getting a list of users.
-app.MapGet("/getusers", async context =>
+app.MapGet("/getusers", (HttpContext context) =>
 {
     var users = userList.ToArray();
-    await JsonSerializer.SerializeAsync(context.Response.Body, users, options);
+    return Results.Ok(users);
 });
 
 // POST command for adding a user.
-app.MapPost("/adduser", (User user, HttpContext context) =>
+app.MapPost("/adduser", ([FromBody] AddUserRequest request, HttpContext context) =>
 {
-    var validationContext = new ValidationContext(user, serviceProvider: null, items: null);
-    var validationResults = new List<ValidationResult>();
-    bool isValid = Validator.TryValidateObject(user, validationContext, validationResults, true);
-
-    if (!isValid)
+    // Check that the incoming request is valid.
+    if (!IsValid(request, out var validationResult))
     {
         failedUserAdds.Inc();
-        // Return failure.
-        return Results.BadRequest(validationResults);
+        return Results.ValidationProblem(ValidationErrors(validationResult));
     }
 
     // Valid user, so add to list of users.
+    User user = new User(request);
     userList.Add(user);
     successfulUserAdds.Inc();
     numActiveUsers.Set(userList.Count);
 
-    // Confirm that everything's okay.
-    string result = $"Received user: FirstName={user.LastName}, LastName={user.FirstName}, Age={user.Age}";
-    return Results.Ok(result);
+    // Confirm success and return the user ID.
+    AddUserResponse response = new AddUserResponse{Id = user.Id};
+    return Results.Ok(response);
 });
 
 // POST command for deleting a user.
 app.MapPost("/deluser", ([FromBody] DeleteUserRequest request, HttpContext context) =>
 {
-    string result;
+    // Check that the incoming request is valid.
+    if (!IsValid(request, out var validationResult))
+    {
+        failedUserDeletes.Inc();
+        return Results.ValidationProblem(ValidationErrors(validationResult));
+    }
 
     // Check if the specified user exists.
-    User? userToRemove = userList.Find(user => user.Id == request.UserId);
+    User? userToRemove = userList.Find(user => user.Id == request.Id);
+
     if (userToRemove == null)
     {
-        result = $"No user found with ID {request.UserId}";
+        // User not found. Report failure.
         failedUserDeletes.Inc();
-        // Return failure.
-        return Results.NotFound(result);
+        return Results.NotFound(new { Message = $"User ID {request.Id} not found." });
     }
     // User found. Delete and report success.
-    result = $"Removed user: FirstName={userToRemove.LastName}, LastName={userToRemove.FirstName}, Age={userToRemove.Age}";
     userList.Remove(userToRemove);
-
 
     numActiveUsers.Set(userList.Count);
 
     // Return success.
-    return Results.Ok(result);
+    return Results.Ok("OK");
 });
 
 // POST command for clearing the user list.
-app.MapPost("/clearusers", ([FromBody] ClearAllUsers request, HttpContext context) =>
+app.MapPost("/clearusers", (ClearAllUsers request, HttpContext context) =>
 {
-    string result;
+    // Check that the incoming request is valid.
+    if (!IsValid(request, out var validationResult))
+    {
+        failedUserClears.Inc();
+        return Results.ValidationProblem(ValidationErrors(validationResult));
+    }
+
     // Check if the specified number of users is correct.
     if (request.NumUsers != userList.Count)
     {
-        result = $"Incorrect user count.";
         failedUserClears.Inc();
         // Return failure.
-        return Results.BadRequest(result);
+        // TODO: change to Results.ValidationProblem().
+        return Results.BadRequest();
     }
     // Number specified is correct. Remove all users.
-    result = $"Removed {request.NumUsers} users.";
     userList.Clear();
     successfulUserClears.Inc();
-    return Results.Ok(result);
+    return Results.Ok();
 });
 
 // Run web app.
 app.Run();
 
+// Helper method for validating incoming JSON requests.
+static bool IsValid<T>(T obj, out ICollection<ValidationResult> results) where T : class
+{
+    var validationContext = new ValidationContext(obj);
+    results = new List<ValidationResult>();
+
+    return Validator.TryValidateObject(obj, validationContext, results, true);
+}
+
+static IDictionary<string, string[]> ValidationErrors (ICollection<ValidationResult> results)
+{
+    var errors = results
+        .GroupBy(r => r.MemberNames.FirstOrDefault() ?? "General")
+        .ToDictionary(
+            g => g.Key,
+            g => g.Select(r => r.ErrorMessage).ToArray()
+        );
+    return errors;
+}
+
+
 // User definition and validation logic.
-public class User
+public class AddUserRequest
 {
     [Required(ErrorMessage = "First name is required.")]
     [StringLength(50, MinimumLength = 1, ErrorMessage = "First name is 1…50 characters.")]
-    public string FirstName { get; set; }
+    public string? FirstName { get; set; }
 
     [Required(ErrorMessage = "Last name is required.")]
     [StringLength(50, MinimumLength = 1, ErrorMessage = "Last name is 1…50 characters.")]
-    public string LastName { get; set; }
+    public string? LastName { get; set; }
 
     [Required(ErrorMessage = "Age is required.")]
     [Range(0, 100, ErrorMessage = "Age is 0…100")]
-    public int Age { get; set; }
+    public int? Age { get; set; }
+}
 
-    [Required(ErrorMessage = "ID is required.")]
-    [Range(0, int.MaxValue, ErrorMessage = "ID is a non-negative integer.")]
+// Class to hold a user.
+public class User
+{
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
+    public int Age { get; set; }
     public int Id { get; set; }
 
     // First user is 0, then 1, etc.
     private static int nextId = 0;
+
+    public User(AddUserRequest addUserRequest)
+    {
+        FirstName = addUserRequest.FirstName ?? string.Empty;
+        LastName = addUserRequest.LastName ?? string.Empty;
+        Age = addUserRequest.Age ?? 0;
+        Id = Interlocked.Increment(ref nextId) - 1; // Thread-safe increment (belt & suspenders).
+    }
 
     public User(String firstName, String lastName, int age)
     {
@@ -182,6 +221,28 @@ public class User
         Age = age;
         Id = Interlocked.Increment(ref nextId) - 1; // Thread-safe increment (belt & suspenders).
     }
+}
+
+// Class for returning the ID assigned to a new user.
+public class AddUserResponse
+{
+    public int Id { get; set; }
+}
+
+// Class for parsing user deletion requests.
+public class DeleteUserRequest
+{
+    [Required(ErrorMessage = "ID is required.")]
+    [Range(0, int.MaxValue, ErrorMessage = "ID is a non-negative integer.")]
+    public int? Id { get; set; }
+}
+
+// Class for parsing user list clear requests.
+public class ClearAllUsers
+{
+    [Required(ErrorMessage = "NumUsers is required")]
+    [Range(0, int.MaxValue, ErrorMessage = "NumUsers is a non-negative integer.")]
+    public int? NumUsers { get; set; }
 }
 
 // Thread-safe user list.
@@ -271,16 +332,4 @@ public class UserList
             return _list.ToArray();
         }
     }
-}
-
-// Class for parsing user deletion requests.
-public class DeleteUserRequest
-{
-    public int UserId { get; set; }
-}
-
-// Class for parsing user list clear requests.
-public class ClearAllUsers
-{
-    public int NumUsers { get; set; }
 }

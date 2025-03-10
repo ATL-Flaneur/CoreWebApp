@@ -83,10 +83,10 @@ Add a user to the system with firstName, lastName, and age.
 Example:
 
 ```
-curl -X POST  -H "Content-Type: application/json" -d '{"firstName":"Fred", "lastName":"Foobar", "age":42}' http://localhost:8080/adduser
+curl -X POST -H "Content-Type: application/json" -d '{"firstName":"Fred", "lastName":"Foobar", "age":42}' http://localhost:8080/adduser
 ```
 
-Users are internally assigned IDs starting with 0. A userlist with IDs for each user may be obtained with the *getusers* API. Returning the ID in the response to this call is omitted for simplicity in this demo but planned for the future.
+Users are internally assigned IDs starting with 0, and the API returns the ID assigned during successful user adds. This value is needed to later delete a user.
 
 ### /deluser
 
@@ -95,7 +95,7 @@ Remove a user with the specified user ID.
 Example:
 
 ```
-curl -X POST -H "Content-Type: application/json" -d '{"userId":0}' http://localhost:8080/deluser
+curl -X POST -H "Content-Type: application/json" -d '{"Id":0}' http://localhost:8080/deluser
 ```
 
 ### /clearusers
@@ -142,10 +142,10 @@ Add the Docker repository:
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 ```
 
-Update the package index:
+Update the package index and upgrade installed packages:
 
 ```
-sudo apt update
+sudo apt update && sudo apt upgrade -y
 ```
 
 Install Docker engine:
@@ -187,7 +187,7 @@ docker build -t server:latest .
 
 ### Run the container and map API ports
 
-The Dockerfile specifies running the APIs on port 8080, so map this port between the container and localhost:
+The Dockerfile specifies running the APIs on port 8080, so map this port between the container and localhost when creating the image:
 
 ```
 docker run -d -p 8080:8080 --name server-container server:latest
@@ -203,7 +203,7 @@ Open a browser and navigate to http://localhost:8080/health or run `curl localho
 sudo apt install prometheus -y
 ```
 
-### Configuration
+### Configure Prometheus
 
 Open the Prometheus configuration file (substitute your favorite editor for `vi`):
 
@@ -272,10 +272,10 @@ Add the Grafana stable repository:
 echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list > /dev/null
 ```
 
-Update the package index:
+Update the package index and upgrade installed packages:
 
 ```
-sudo apt update
+sudo apt update && sudo apt upgrade -y
 ```
 
 Install Grafana OSS. This is the free-to-use, open-source version released under the Apache 2.0 license.
@@ -315,7 +315,7 @@ http://localhost:3000/connections/datasources/edit/bef1irc8cho1sc
 
 Then the UID is *bef1irc8cho1sc*. This will be needed shortly.
 
-Type in a descriptive name like *Prometheus Server* for the data source and specify *http://localhost:9090* for the server URL. Scroll to the bottom of the page and click *Save and test*. A message *Successfully queried the Prometheus API.* should pop up in green.
+Type in a descriptive name like *Prometheus Server* for the data source and specify *http://localhost:9090* for the server URL. Scroll to the bottom of the page and click *Save and test*. A message *Successfully queried the Prometheus API.* should pop up in green. If not, make sure that Prometheus 
 
 ### Map UIDs in Server dashboard
 
