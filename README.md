@@ -26,12 +26,12 @@ Replace "8080" with "5000" in `curl` commands when running in VS Code.
 
 ### /health
 
-Returns a 200 status code if the app is running.
+Returns 200 "OK" if the app is running.
 
 Example:
 
 ```
-curl http://localhost:8080/health 
+curl -i http://localhost:8080/health 
 ```
 
 ### /metrics
@@ -88,14 +88,14 @@ curl -X POST -H "Content-Type: application/json" -d '{"firstName":"Fred", "lastN
 
 Users are internally assigned IDs starting with 0, and the API returns the ID assigned during successful user adds. This value is needed to later delete a user.
 
-### /deluser
+### /users/{id}
 
 Remove a user with the specified user ID.
 
 Example:
 
 ```
-curl -X POST -H "Content-Type: application/json" -d '{"Id":0}' http://localhost:8080/deluser
+curl -i -X DELETE http://localhost:8080/users/0
 ```
 
 ### /clearusers

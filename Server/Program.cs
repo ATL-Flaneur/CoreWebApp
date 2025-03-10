@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.ComponentModel.DataAnnotations;
 using Prometheus;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel;
 
 // Need $ dotnet add package prometheus-net.AspNetCore
 
@@ -21,12 +22,6 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-// Set JSON serializer options.
-JsonSerializerOptions options = new JsonSerializerOptions
-{
-    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-};
-
 // Define custom Prometheus metrics.
 var successfulUserAdds = Metrics.CreateCounter("successful_user_adds", "Number of successful user adds.");
 var failedUserAdds = Metrics.CreateCounter("failed_user_adds", "Number of failed user adds.");
@@ -44,7 +39,7 @@ totalMemoryGauge.Set(GC.GetGCMemoryInfo().TotalAvailableMemoryBytes);
 app.UseHttpsRedirection();
 
 // List of users added by POST commands.
-UserList userList = new UserList();
+List<User> userList = new List<User>();
 
 // Add Prometheus middleware and metrics.
 app.UseMetricServer();
@@ -52,7 +47,6 @@ app.UseRouting();
 app.UseHttpMetrics();
 
 // Return system health. If the app is running, it's healthy.
-// TODO: migrate to app.MapHealthChecks()
 app.MapGet("/health", (HttpContext context) =>
 {
     return Results.Ok("OK");
@@ -104,31 +98,18 @@ app.MapPost("/adduser", ([FromBody] AddUserRequest request, HttpContext context)
 });
 
 // POST command for deleting a user.
-app.MapPost("/deluser", ([FromBody] DeleteUserRequest request, HttpContext context) =>
+app.MapDelete("/users/{id}", (int id) =>
 {
-    // Check that the incoming request is valid.
-    if (!IsValid(request, out var validationResult))
-    {
-        failedUserDeletes.Inc();
-        return Results.ValidationProblem(ValidationErrors(validationResult));
-    }
-
-    // Check if the specified user exists.
-    User? userToRemove = userList.Find(user => user.Id == request.Id);
-
+    var userToRemove = userList.Find(user => user.Id == id);
     if (userToRemove == null)
     {
-        // User not found. Report failure.
         failedUserDeletes.Inc();
-        return Results.NotFound(new { Message = $"User ID {request.Id} not found." });
+        return Results.NotFound(new { Message = $"User ID {id} not found" });
     }
-    // User found. Delete and report success.
     userList.Remove(userToRemove);
-
+    successfulUserDeletes.Inc();
     numActiveUsers.Set(userList.Count);
-
-    // Return success.
-    return Results.Ok("OK");
+    return Results.NoContent();
 });
 
 // POST command for clearing the user list.
@@ -145,14 +126,18 @@ app.MapPost("/clearusers", (ClearAllUsers request, HttpContext context) =>
     if (request.NumUsers != userList.Count)
     {
         failedUserClears.Inc();
-        // Return failure.
-        // TODO: change to Results.ValidationProblem().
-        return Results.BadRequest();
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            { "NumUsers", [$"Expected {userList.Count} users, got {request.NumUsers}"] }
+        });
     }
     // Number specified is correct. Remove all users.
     userList.Clear();
+    numActiveUsers.Set(userList.Count);
     successfulUserClears.Inc();
-    return Results.Ok();
+
+    // Return "204 No Content" indicating success.
+    return Results.NoContent();
 });
 
 // Run web app.
@@ -173,7 +158,8 @@ static IDictionary<string, string[]> ValidationErrors (ICollection<ValidationRes
         .GroupBy(r => r.MemberNames.FirstOrDefault() ?? "General")
         .ToDictionary(
             g => g.Key,
-            g => g.Select(r => r.ErrorMessage).ToArray()
+            g => g.Select(r => r.ErrorMessage ?? string.Empty) // Map nulls to empty strings.
+                 .ToArray()
         );
     return errors;
 }
@@ -208,9 +194,10 @@ public class User
 
     public User(AddUserRequest addUserRequest)
     {
-        FirstName = addUserRequest.FirstName ?? string.Empty;
-        LastName = addUserRequest.LastName ?? string.Empty;
-        Age = addUserRequest.Age ?? 0;
+        // Values are non-null due to [Required].
+        FirstName = addUserRequest.FirstName!; 
+        LastName = addUserRequest.LastName!;
+        Age = addUserRequest.Age!.Value;
         Id = Interlocked.Increment(ref nextId) - 1; // Thread-safe increment (belt & suspenders).
     }
 
@@ -229,107 +216,10 @@ public class AddUserResponse
     public int Id { get; set; }
 }
 
-// Class for parsing user deletion requests.
-public class DeleteUserRequest
-{
-    [Required(ErrorMessage = "ID is required.")]
-    [Range(0, int.MaxValue, ErrorMessage = "ID is a non-negative integer.")]
-    public int? Id { get; set; }
-}
-
 // Class for parsing user list clear requests.
 public class ClearAllUsers
 {
     [Required(ErrorMessage = "NumUsers is required")]
     [Range(0, int.MaxValue, ErrorMessage = "NumUsers is a non-negative integer.")]
     public int? NumUsers { get; set; }
-}
-
-// Thread-safe user list.
-public class UserList
-{
-    private List<User> _list = new List<User>();
-    private readonly object _lock = new object();
-
-    // Add an user to the list.
-    public void Add(User item)
-    {
-        lock (_lock)
-        {
-            _list.Add(item);
-        }
-    }
-
-    // Add a user to the list.
-    public void Remove(User userToRemove)
-    {
-        lock (_lock)
-        {
-            _list.Remove(userToRemove);
-        }
-    }
-
-    // Find an item based on a predicate. May return null.
-    public User Find(Predicate<User> predicate)
-    {
-        lock (_lock)
-        {
-            return _list.Find(predicate);
-        }
-    }
-
-    // Get or set an element by index.
-    public User this[int index]
-    {
-        get
-        {
-            lock (_lock)
-            {
-                if (index < 0 || index >= _list.Count)
-                    throw new ArgumentOutOfRangeException(nameof(index));
-                return _list[index];
-            }
-        }
-        set
-        {
-            lock (_lock)
-            {
-                if (index < 0 || index >= _list.Count)
-                    throw new ArgumentOutOfRangeException(nameof(index));
-                _list[index] = value;
-            }
-        }
-    }
-
-    // Get the number of elements in the list.
-    public int Count
-    {
-        get
-        {
-            lock (_lock)
-            {
-                return _list.Count;
-            }
-        }
-    }
-
-    // Delete all items from the list.
-    public void Clear()
-    {
-        {
-            lock (_lock)
-            {
-                _list.Clear();
-            }
-        }
-    }
-
-    // Return the list as an array.
-    public User[] ToArray()
-    {
-        lock (_lock)
-        {
-            return _list.ToArray();
-        }
-    }
 }
