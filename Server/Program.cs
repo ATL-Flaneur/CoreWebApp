@@ -93,7 +93,7 @@ app.MapPost("/adduser", ([FromBody] AddUserRequest request, HttpContext context)
     numActiveUsers.Set(userList.Count);
 
     // Confirm success and return the user ID.
-    AddUserResponse response = new AddUserResponse{Id = user.Id};
+    AddUserResponse response = new AddUserResponse { Id = user.Id };
     return Results.Ok(response);
 });
 
@@ -152,7 +152,7 @@ static bool IsValid<T>(T obj, out ICollection<ValidationResult> results) where T
     return Validator.TryValidateObject(obj, validationContext, results, true);
 }
 
-static IDictionary<string, string[]> ValidationErrors (ICollection<ValidationResult> results)
+static IDictionary<string, string[]> ValidationErrors(ICollection<ValidationResult> results)
 {
     var errors = results
         .GroupBy(r => r.MemberNames.FirstOrDefault() ?? "General")
@@ -195,7 +195,7 @@ public class User
     public User(AddUserRequest addUserRequest)
     {
         // Values are non-null due to [Required].
-        FirstName = addUserRequest.FirstName!; 
+        FirstName = addUserRequest.FirstName!;
         LastName = addUserRequest.LastName!;
         Age = addUserRequest.Age!.Value;
         Id = Interlocked.Increment(ref nextId) - 1; // Thread-safe increment (belt & suspenders).
