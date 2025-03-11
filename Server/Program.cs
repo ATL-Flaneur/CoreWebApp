@@ -39,7 +39,7 @@ totalMemoryGauge.Set(GC.GetGCMemoryInfo().TotalAvailableMemoryBytes);
 app.UseHttpsRedirection();
 
 // List of users added by POST commands.
-List<User> userList = new List<User>();
+UserList userList = new UserList();
 
 // Add Prometheus middleware and metrics.
 app.UseMetricServer();
@@ -222,4 +222,93 @@ public class ClearAllUsers
     [Required(ErrorMessage = "NumUsers is required")]
     [Range(0, int.MaxValue, ErrorMessage = "NumUsers is a non-negative integer.")]
     public int? NumUsers { get; set; }
+}
+
+// Thread-safe user list.
+public class UserList
+{
+    private List<User> _list = new List<User>();
+    private readonly object _lock = new object();
+
+    // Add an user to the list.
+    public void Add(User item)
+    {
+        lock (_lock)
+        {
+            _list.Add(item);
+        }
+    }
+
+    // Add a user to the list.
+    public void Remove(User userToRemove)
+    {
+        lock (_lock)
+        {
+            _list.Remove(userToRemove);
+        }
+    }
+
+    // Find an item based on a predicate. May return null.
+    public User? Find(Predicate<User> predicate)
+    {
+        lock (_lock)
+        {
+            return _list.Find(predicate);
+        }
+    }
+
+    // Get or set an element by index.
+    public User this[int index]
+    {
+        get
+        {
+            lock (_lock)
+            {
+                if (index < 0 || index >= _list.Count)
+                    throw new ArgumentOutOfRangeException(nameof(index));
+                return _list[index];
+            }
+        }
+        set
+        {
+            lock (_lock)
+            {
+                if (index < 0 || index >= _list.Count)
+                    throw new ArgumentOutOfRangeException(nameof(index));
+                _list[index] = value;
+            }
+        }
+    }
+
+    // Get the number of elements in the list.
+    public int Count
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _list.Count;
+            }
+        }
+    }
+
+    // Delete all items from the list.
+    public void Clear()
+    {
+        {
+            lock (_lock)
+            {
+                _list.Clear();
+            }
+        }
+    }
+
+    // Return the list as an array.
+    public User[] ToArray()
+    {
+        lock (_lock)
+        {
+            return _list.ToArray();
+        }
+    }
 }
