@@ -142,10 +142,10 @@ Add the Docker repository:
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 ```
 
-Update the package index and upgrade installed packages:
+Update the package index:
 
 ```
-sudo apt update && sudo apt upgrade -y
+sudo apt update
 ```
 
 Install Docker engine:
@@ -272,10 +272,10 @@ Add the Grafana stable repository:
 echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list > /dev/null
 ```
 
-Update the package index and upgrade installed packages:
+Update the package index:
 
 ```
-sudo apt update && sudo apt upgrade -y
+sudo apt update
 ```
 
 Install Grafana OSS. This is the free-to-use, open-source version released under the Apache 2.0 license.
