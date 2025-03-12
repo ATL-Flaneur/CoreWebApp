@@ -37,15 +37,15 @@ resource "aws_security_group" "app_sg" {
   description = "Security group for Fargate tasks"
   vpc_id      = aws_vpc.main.id
   
-  # Allow inbound HTTP traffic.
+  # Allow inbound HTTP traffic from ALB.
   ingress {
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["0.0.0.0/0"]  # ALB will handle security; adjust for production
   }
   
-  # Allow all outbound traffic.
+  # Allow all outbound traffic (needed for ECR pulls).
   egress {
     from_port   = 0
     to_port     = 0
@@ -60,7 +60,7 @@ resource "aws_lb" "app" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.app_sg.id]
-  subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+  subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id]  # Remains in public subnets
   
   tags = {
     Name = "app-alb"
@@ -103,7 +103,7 @@ resource "aws_ecs_task_definition" "app" {
   
   container_definitions = jsonencode([{
     name  = "app-container"
-    image = var.docker_image  # Your Docker image.
+    image = var.docker_image  # Docker image.
     portMappings = [{
       containerPort = 8080
       hostPort      = 8080
@@ -122,12 +122,12 @@ resource "aws_ecs_service" "app" {
   load_balancer {
     target_group_arn = aws_lb_target_group.app.arn
     container_name   = "app-container"
-    container_port   = 8080
+    container_port  = 8080
   }
   
   network_configuration {
-    subnets         = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+    subnets         = [aws_subnet.private_a.id, aws_subnet.private_b.id]  # Use private subnets
     security_groups = [aws_security_group.app_sg.id]
-    assign_public_ip = true  # Required for Fargate in public subnets.
+    assign_public_ip = false  # Turn off public IP
   }
 }
