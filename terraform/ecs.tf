@@ -128,6 +128,6 @@ resource "aws_ecs_service" "app" {
   network_configuration {
     subnets         = [aws_subnet.public_a.id, aws_subnet.public_b.id]
     security_groups = [aws_security_group.app_sg.id]
-    assign_public_ip = false  # Required for Fargate in public subnets.
+    assign_public_ip = true  # Required for Fargate in public subnets.
   }
 }
