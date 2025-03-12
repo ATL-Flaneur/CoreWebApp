@@ -54,6 +54,44 @@ resource "aws_security_group" "app_sg" {
   }
 }
 
+# Application load balancer (ALB) definition.
+resource "aws_lb" "app" {
+  name               = "app-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.app_sg.id]
+  subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+  
+  tags = {
+    Name = "app-alb"
+  }
+}
+
+# Target Group
+resource "aws_lb_target_group" "app" {
+  name        = "app-tg"
+  port        = 8080
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"  # Fargate uses IP targets
+  
+  health_check {
+    path = "/health"  # App health endpoint.
+  }
+}
+
+# ALB listener.
+resource "aws_lb_listener" "app" {
+  load_balancer_arn = aws_lb.app.arn
+  port              = 8080
+  protocol          = "HTTP"
+  
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app.arn
+  }
+}
+
 # ECS Task Definition.
 resource "aws_ecs_task_definition" "app" {
   family                   = "app-task"
@@ -80,10 +118,16 @@ resource "aws_ecs_service" "app" {
   task_definition = aws_ecs_task_definition.app.arn
   launch_type     = "FARGATE"
   desired_count   = 1
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.app.arn
+    container_name   = "app-container"
+    container_port   = 80
+  }
   
   network_configuration {
     subnets         = [aws_subnet.public_a.id, aws_subnet.public_b.id]
     security_groups = [aws_security_group.app_sg.id]
-    assign_public_ip = true  # Required for Fargate in public subnets.
+    assign_public_ip = false  # Required for Fargate in public subnets.
   }
 }
