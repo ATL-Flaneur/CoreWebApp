@@ -36,7 +36,7 @@ jobs:
           ECR_REPOSITORY: server  # ECR repo name.
           IMAGE_TAG: ${{ github.sha }}  # Unique tag based on commit SHA.
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker build -f Server/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./Server
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       # Set up Terraform.
