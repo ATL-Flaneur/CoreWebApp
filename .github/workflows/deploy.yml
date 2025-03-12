@@ -33,8 +33,8 @@ jobs:
       - name: Build, tag, and push image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: server  # ECR repo name.
-          IMAGE_TAG: ${{ github.sha }}  # Unique tag based on commit SHA.
+          ECR_REPOSITORY: my-app-repo # ECR repo name.
+          IMAGE_TAG: ${{ github.sha }} # Unique tag based on commit SHA.
         run: |
           docker build -f Server/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./Server
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -43,7 +43,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.0  # Adjust to your version.
+          terraform_version: 1.5.0 # Adjust to your version.
 
       # Initialize Terraform.
       - name: Terraform Init
