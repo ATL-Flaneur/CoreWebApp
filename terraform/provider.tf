@@ -12,6 +12,11 @@ provider "aws" {
 # Ensure we're using a compatible Terraform version.
 
 terraform {
+    backend "s3" {
+    bucket = "my-terraform-state-890742572437"  # Use your bucket name
+    key    = "terraform.tfstate"
+    region = "us-east-1"
+  }
   required_providers {
     aws = {
       source  = "hashicorp/aws"
