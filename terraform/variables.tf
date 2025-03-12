@@ -10,6 +10,7 @@ variable "aws_region" {
 variable "docker_image" {
   description = "Docker image to deploy (e.g., yourusername/yourapp:latest)"
   type        = string
+  default     = "890742572437.dkr.ecr.us-east-1.amazonaws.com/server:latest"
 }
 
 # Container port your app listens on
