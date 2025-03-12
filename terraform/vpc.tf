@@ -116,15 +116,15 @@ resource "aws_route_table_association" "private_b" {
   route_table_id = aws_route_table.private.id
 }
 
-# Elastic IP for NAT Gateway
+# Elastic IP for NAT gateway.
 resource "aws_eip" "nat" {
-  vpc = true
+  domain = "vpc"
 }
 
-# NAT Gateway
+# NAT gateway.
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public_a.id  # Place in a public subnet
+  subnet_id     = aws_subnet.public_a.id
   depends_on    = [aws_internet_gateway.main]
   
   tags = {
