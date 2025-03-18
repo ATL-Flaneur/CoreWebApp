@@ -1,11 +1,11 @@
 name: Deploy to ECS
 
 on:
-  push:
-    branches:
-      - main  # Trigger on push to main branch.
+  # Only trigger manually for now.
+  # push:
+  #   branches:
+  #     - main  # Trigger on push to main branch.
   workflow_dispatch:  # Manual trigger for troubleshooting.
-
 
 jobs:
   deploy:
