@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ./Server
+      dockerfile: Dockerfile
+    image: my-aspnet-app:latest
+    ports:
+      - "8080:8080"  # Map host port 8080 to container port 8080
+    environment:
+      - ASPNETCORE_URLS=http://+:8080  # Ensure app listens on 8080
+    networks:
+      - monitoring
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml  # Custom Prometheus config
+    ports:
+      - "9090:9090"  # Default Prometheus UI port
+    networks:
+      - monitoring
+    depends_on:
+      - server
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"  # Default Grafana UI port
+    volumes:
+      - ./dashboards/server_dashboard.json:/etc/grafana/provisioning/dashboards/server_dashboard.json
+      - ./grafana-dashboard-provisioning.yml:/etc/grafana/provisioning/dashboards/dashboard.yml
+      - ./grafana-datasource-provisioning.yml:/etc/grafana/provisioning/datasources/datasource.yml  # Ensure this line is present
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin  # Default admin password
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
+
+networks:
+  monitoring:
+    driver: bridge
