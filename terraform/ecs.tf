@@ -42,7 +42,7 @@ resource "aws_security_group" "app_sg" {
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # ALB will handle security; adjust for production
+    cidr_blocks = ["0.0.0.0/0"]  # ALB will handle security. Adjust for production.
   }
   
   # Allow all outbound traffic (needed for ECR pulls).
@@ -60,7 +60,7 @@ resource "aws_lb" "app" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.app_sg.id]
-  subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id]  # Remains in public subnets
+  subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id]  # Remains in public subnets.
   
   tags = {
     Name = "app-alb"

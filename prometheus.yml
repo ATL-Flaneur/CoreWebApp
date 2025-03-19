@@ -1,7 +1,10 @@
 global:
-  scrape_interval: 5s
+  scrape_interval: 15s  # Sensible default scrape interval for all jobs.
+  scrape_timeout: 10s   # Sensible default scrape timeout.
 
 scrape_configs:
-  - job_name: 'aspnet-app'
+  - job_name: 'server_docker'
+    scrape_interval: 5s   # Override global scrape interval.
+    scrape_timeout: 5s    # Override global scrape timeout.
     static_configs:
-      - targets: ['server:8080']
+      - targets: ['server:8080']  # Use service name 'server' defined in docker-compose.
