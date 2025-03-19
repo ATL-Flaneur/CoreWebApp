@@ -108,27 +108,27 @@ Example (currently 10 users):
 curl -X POST -H "Content-Type: application/json" -d '{"numUsers":10}' http://localhost:8080/clearusers
 ```
 
-## Docker
+## Docker Compose
+
+This section covers running the Dockerized ASP.NET application alongside Prometheus and Grafana containers with Docker Compose.
 
 ### Installation check
 
-See if Docker is installed:
+See if Docker and Docker Compose are installed by typing the following at the command line:
 
 ```
-command -v docker
+docker compose version
 ```
 
-If so, check that the user is a member of the *docker* group, which is needed for running containers:
+If the result is a version number, then check that the user is a member of the *docker* group, which is needed for running containers:
 
 ```
 groups | grep docker
 ```
 
-If both these checks pass, then jump down to [Build the container](#Build-the-container). If Docker is installed but not runnable by the current user, then either preface the `docker` commands with `sudo` or follow the instructions in [Verify Docker can be run by the user](#Verify-Docker-can-be-run-by-the-user).
+If both these checks pass, then proceed to [Run the containers][#Run the containers]. If Docker is installed but not runnable by the current user, then either preface the `docker` commands with `sudo` or follow the instructions in [Verify Docker can be run by the user](#Verify-Docker-can-be-run-by-the-user). Otherwise see the [Docker docs](https://docs.docker.com/engine/install/ubuntu/) for detailed installation help. Summarized instructions appear in the next section.
 
 ### Install Docker
-
-Follow the instructions in this section to install Docker. See [Docker docs](https://docs.docker.com/engine/install/ubuntu/) for detailed installation help.
 
 Install the Docker GPG key:
 
@@ -148,10 +148,10 @@ Update the package index:
 sudo apt update
 ```
 
-Install Docker engine:
+Install the Docker engine along with Docker Compose:
 
 ```
-sudo apt install -y docker-ce docker-ce-cli containerd.io
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 ```
 
 ### Verify Docker can be run by the user
@@ -162,7 +162,7 @@ Check if the login user is already a member of the `docker` group:
 groups | grep docker
 ```
 
-If so, skip to [Build the container](#Build-the-container). If not, first check that the `docker` group exists:
+If so, skip to [Run the containers](#Run-the-containers). If not, first check that the `docker` group exists:
 
 ```
 getent group docker
@@ -178,14 +178,61 @@ sudo usermod -aG docker $USER
 
 Log out and log back in again to put the change into effect.
 
-### Build the container
+### Run the containers
+
+From the project root directory, run:
+
+```
+docker compose up --build -d
+```
+
+Verify that the containers are running once terminal output finishes:
+
+```
+docker ps
+```
+
+This should indicate that containers named *corewebapp-grafana-1*, *corewebapp-prometheus-1*, and *corewebapp-server-1* are all running.
+
+### Connect to the containers
+
+The containers are created on a private *bridge* network that isolates them from the LAN and makes them available via port mapping to *localhost*. Reaching the containers directly would require configuring a *macvlan* network. Mapped ports include 8080 for the server app, 9000 for Prometheus, and 3000 for Grafana. We will check these ports in turn.
+
+Open a browser and navigate to http://localhost:8080/health or run `curl localhost:8080/health` to verify that the server app is running in the container. If the Docker host is running on a computer named *roscoe.local*, the container can be reached via http://roscoe.local:8080/health or `curl roscoe.local:8080/health`.
+
+View the Prometheus dashboard by pointing a browser to http://localhost:9090. Click on *Status* then *Targets* to view endpoints. One should be http://server:8080/metrics, and *State* should be listed as *UP* in green. Clicking on this URL will fail because name resolution does not work outside the *bridge* network between the containers.
+
+Connecting to http://localhost:3000/ will bring up a Grafana login screen. The default username/password is `admin`/`admin`. You can choose a stronger password if you wish, otherwise click *Skip* at the bottom of the password-change form. This should bring you to a *Welcome to Grafana* page. Click on the spiral Grafana logo in the top-left corner of the screen, then *Dashboards* and *Server Stats*. 
+
+The dashboard should appear as follows:
+
+![Example dashboard](./images/dashboard.png "Example Dashboard")
+
+
+### Update metrics
+
+The *curl* commands in [APIs](#APIs) can be used to hit the web APIs and move the statistics. Use port 8080 if running Server in a Docker container or 5000 if running in VS Code.
+
+For example, typing the following should increase *Successful Adds* and *Active Users* along with *POST (5 min)*:
+
+```
+curl -X POST  -H "Content-Type: application/json" -d '{"firstName":"Fred", "lastName":"Foobar", "age":42}' http://localhost:8080/adduser
+```
+
+## Optional configuration
+
+*Docker Compose* provides the easiest way to run the app. The components may also be installed individually for testing, running the app with *Docker* and Prometheus and Grafana as daemons.
+
+### Web app with Docker
+
+#### Build the container
 
 ```
 cd CoreWebApp/Server
 docker build -t server:latest .
 ```
 
-### Run the container and map API ports
+#### Run the container and map API ports
 
 The Dockerfile specifies running the APIs on port 8080, so map this port between the container and localhost when creating the image:
 
@@ -195,15 +242,15 @@ docker run -d -p 8080:8080 --name server-container server:latest
 
 Open a browser and navigate to http://localhost:8080/health or run `curl localhost:8080/health` to verify that the app is running in the container.
 
-## Prometheus
+### Prometheus
 
-### Install Prometheus
+#### Install Prometheus
 
 ```
 sudo apt install prometheus -y
 ```
 
-### Configure Prometheus
+#### Configure Prometheus
 
 Open the Prometheus configuration file (substitute your favorite editor for `vi`):
 
@@ -250,15 +297,15 @@ sudo systemctl restart prometheus
 sudo systemctl status prometheus
 ```
 
-### Checking Prometheus metrics
+#### Checking Prometheus metrics
 
 Open a browser and navigate to http://localhost:9090/classic/targets to view available endpoints.
 
 Target *server_docker* should appear in blue indicating a connection if the Docker container is running. Running the app in the VS Code debugger will activate the *server_debug* target.
 
-## Grafana
+### Grafana
 
-### Install Grafana 
+#### Install Grafana 
 
 Install the Grafana GPG key:
 
@@ -284,7 +331,7 @@ Install Grafana OSS. This is the free-to-use, open-source version released under
 sudo apt-get install -y grafana
 ```
 
-### Start Grafana
+#### Start Grafana
 
 Start Grafana:
 
@@ -299,7 +346,7 @@ Verify that Grafana is running:
 sudo systemctl status grafana-server
 ```
 
-### Connecting to Grafana
+#### Connecting to Grafana
 
 Verify that Grafana is running by opening a browser and navigating to http://localhost:3000 to view the dashboard. The default username/password is `admin`/`admin`. You can choose a stronger password if you wish, otherwise click *Skip* at the bottom of the password-change form. This should bring you to a *Welcome to Grafana* page.
 
@@ -307,49 +354,15 @@ Verify that Grafana is running by opening a browser and navigating to http://loc
 
 From the Grafana main dashboard, click the spiral menu icon in the top-left corner and select *Connections*. Type *Prometheus* into the search bar, then click on the *Prometheus* icon that appears in the *Data sources* panel. Click on the *Add data source* button that appears in the top-right corner of the screen.
 
-Get the UID of the data source from the page URL. For example, if the URL is:
+Name the data source *Prometheus Server* and specify *http://localhost:9090* for the server URL. Scroll to the bottom of the page and click *Save and test*. A message *Successfully queried the Prometheus API.* should pop up in green. If not, make sure that Prometheus is running.
 
-```
-http://localhost:3000/connections/datasources/edit/bef1irc8cho1sc
-```
-
-Then the UID is *bef1irc8cho1sc*. This will be needed shortly.
-
-Type in a descriptive name like *Prometheus Server* for the data source and specify *http://localhost:9090* for the server URL. Scroll to the bottom of the page and click *Save and test*. A message *Successfully queried the Prometheus API.* should pop up in green. If not, make sure that Prometheus 
-
-### Map UIDs in Server dashboard
-
-Open a terminal window an *cd* to *~/CoreWebApp/dashboards*.
-
-```
-cd ~/CoreWebApp/dashboards
-```
-
-Then type:
-
-```
-grep uid server_dashboard.json
-```
-
-The top UID should say *"-- Grafana --"* and the bottom UID will be for the dashboard. In between should be the same UID repeated multiple times at different levels of indentation, such as *"uid": "cee25gg4nj9xcc"*.
-
-Create a new JSON file with the datasource UID updated to the one created in the previous section. Replace the placeholder UID (e.g., `cee25gg4nj9xcc`) in `server_dashboard.json` with your data source UID (e.g., `bef1irc8cho1sc`) using:
-
-```
-sed 's/cee25gg4nj9xcc/eef1ehsondx4wc/g' server_dashboard.json > my_server_dashboard.json
-```
-
-### Import the Server dashboard
+#### Import the Server dashboard
 
 Click the menu icon in the top-left corner and select *dashboards*. Click *new* then *import*. Import *my_server_dashboard.json* file from the *./dashboards* directory either by dragging it onto upload widget or opening it in a text editor and copying the JSON into the text widget. Don't change the UID. Then click *Import* The dashboard may initially render with panels displaying *No data* messages. If so, refresh the page to begin displaying data.
 
 The *job* dropdown should allow selecting between *server_docker*, *server_debug*, and any other configured data sources.
 
-The dashboard should appear as follows:
-
-![Example dashboard](./images/dashboard.png "Example Dashboard")
-
-### Updating metrics
+#### Updating metrics
 
 The *curl* commands in [APIs](#APIs) can be used to hit the web APIs and move the statistics. Use port 8080 if running Server in a Docker container or 5000 if running in VS Code.
 
@@ -357,70 +370,6 @@ For example, typing the following should increase *Successful Adds* and *Active 
 
 ```
 curl -X POST  -H "Content-Type: application/json" -d '{"firstName":"Fred", "lastName":"Foobar", "age":42}' http://localhost:8080/adduser
-```
-
-## Optional configuration
-
-This optional section enables Grafana to expose its own metrics to Prometheus, enhancing monitoring capabilities. They're not scraped for the *System Stats* dashboard loaded earlier.
-
-### Configure Grafana to generate data for Prometheus
-
-Open the Grafana configuration file (substitute your favorite editor for `vi`):
-
-```
-sudo vi /etc/grafana/grafana.ini
-```
-
-Scroll down to `Internal Grafana Metrics` and uncomment (remove the semicolon) the lines:
-
-```
-enabled = true
-```
-
-and
-
-```
-disable_total_stats = false
-```
-
-Then, restart Grafana and verify that it's running:
-
-```
-sudo systemctl restart grafana-server
-sudo systemctl status grafana-server
-```
-
-### Configure Prometheus to scrape Grafana data
-
-Open the Prometheus configuration file (substitute your favorite editor for `vi`):
-
-```
-sudo vi /etc/prometheus/prometheus.yml 
-```
-
-Scroll down to the bottom and add a new job:
-
-```
-  - job_name: 'grafana_metrics'
-
-    scrape_interval: 5s
-    scrape_timeout: 5s
-
-    static_configs:
-      - targets: ['localhost:3000']
-```
-
-Verify the configuration file:
-
-```
-promtool check config /etc/prometheus/prometheus.yml
-```
-
-Fix any mistakes then restart Prometheus and check that it's running:
-
-```
-sudo systemctl restart prometheus
-sudo systemctl status prometheus
 ```
 
 
