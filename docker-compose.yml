@@ -9,7 +9,9 @@ services:
     environment:
       - ASPNETCORE_URLS=http://+:8080  # Ensure app listens on 8080.
     networks:
-      - server-network
+      server-network:
+        aliases:
+          - server-container.local
 
   prometheus-container:
     image: prom/prometheus:latest
@@ -18,7 +20,9 @@ services:
     ports:
       - "9090:9090"  # Default Prometheus UI port.
     networks:
-      - server-network
+      server-network:
+        aliases:
+          - prometheus-container.local
     depends_on:
       - server-container
 
@@ -34,7 +38,9 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin  # Default admin password.
       - GF_USERS_ALLOW_SIGN_UP=false
     networks:
-      - server-network
+      server-network:
+        aliases:
+          - grafana-container.local
     depends_on:
       - prometheus-container
 

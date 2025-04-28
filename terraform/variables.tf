@@ -11,14 +11,14 @@ variable "aws_region" {
 variable "server_image" {
   description = "Docker image to deploy (e.g., yourusername/yourapp:latest)"
   type        = string
-  default     = "890742572437.dkr.ecr.us-east-1.amazonaws.com/server:latest"
+  default     = "890742572437.dkr.ecr.us-east-1.amazonaws.com/my-app-repo:server-latest"
 }
 
 # Grafana docker image.
 variable "grafana_image" {
   description = "Docker image to deploy (e.g., yourusername/yourapp:latest)"
   type        = string
-  default     = "890742572437.dkr.ecr.us-east-1.amazonaws.com/grafana:latest"
+  default     = "890742572437.dkr.ecr.us-east-1.amazonaws.com/my-app-repo:grafana-custom-latest"
 }
 
 
@@ -26,7 +26,7 @@ variable "grafana_image" {
 variable "prometheus_image" {
   description = "Docker image to deploy (e.g., yourusername/yourapp:latest)"
   type        = string
-  default     = "890742572437.dkr.ecr.us-east-1.amazonaws.com/prometheus:latest"
+  default     = "890742572437.dkr.ecr.us-east-1.amazonaws.com/my-app-repo:prometheus-custom-latest"
 }
   
 
